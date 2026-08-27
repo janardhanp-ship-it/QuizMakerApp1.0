@@ -11,9 +11,10 @@ the problem, the primary user, and the current state. Two or three sentences.
 Keep it current. An out-of-date description here misleads every future conversation.
 -->
 
-This is an unmodified AISprints starter. No application features have been built yet.
-The technical PRD in `ai-workspace/` is the source of truth for what is being built and
-for the current phase of work.
+This is Quiz Maker: learners register, log in, and will take MCQ quizzes.
+Authentication (D1 users, hashed passwords, cookie sessions) is implemented.
+The technical PRD in `ai-workspace/AUTHENTICATION_TECHNICAL_PRD.md` is the source of truth
+for auth and for the current phase of work.
 
 ## Stack
 
@@ -23,9 +24,12 @@ for the current phase of work.
 - **shadcn/ui** on Base UI, `base-nova` style, with Lucide icons
 - **TypeScript** in strict mode
 - **Wrangler** for Cloudflare configuration, secrets, and deployment
+- **Vitest** for unit tests (`npm run test`)
 
-No database, authentication, testing framework, or AI SDK is installed yet. Do not
-write code that imports one without adding it first and telling the user.
+No AI SDK is installed yet. Do not write code that imports one without adding it first
+and telling the user.
+
+D1 is configured with binding `DB`. Authentication code lives under `src/lib/users/` and `src/lib/auth/`.
 
 ## Layout
 
@@ -49,6 +53,8 @@ Import through the `@/` alias, which maps to `src/`.
 | `npm run preview` | Build and run on the local **Workers** runtime |
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
+| `npm run test` | Vitest unit tests once |
+| `npm run test:watch` | Vitest in watch mode |
 | `npm run deploy` | Build and deploy to Cloudflare |
 | `npm run cf-typegen` | Regenerate `cloudflare-env.d.ts` after changing bindings |
 
@@ -66,7 +72,7 @@ anything runtime-sensitive with `npm run preview`.
 - **Keep secrets out of the repo.** Local values belong in `.dev.vars`, which is
   gitignored. When adding a variable, also add an empty placeholder to
   `.dev.vars.example`. Production values go in `wrangler secret put`.
-- **Verify before claiming completion.** Run `npm run lint` and `npm run build` and
+- **Verify before claiming completion.** Run `npm run lint`, `npm run test`, and `npm run build` and
   report the actual result. Do not describe work as done based on inspection alone.
 - **Say when you are unsure.** A flagged uncertainty is more useful than a confident
   guess that has to be unwound later.
