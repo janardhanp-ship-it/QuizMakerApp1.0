@@ -1,5 +1,6 @@
 const PBKDF2_ALGORITHM = "pbkdf2-sha256";
-const PBKDF2_ITERATIONS = 310_000;
+// 310_000 is OWASP-scale but exceeds typical Workers CPU limits and 500s register.
+export const PBKDF2_ITERATIONS = 60_000;
 const HASH_BITS = 256;
 const SALT_BYTES = 16;
 
@@ -39,11 +40,12 @@ async function deriveBits(password: string, salt: Uint8Array, iterations: number
 		false,
 		["deriveBits"],
 	);
+	const saltCopy = new Uint8Array(salt);
 	const bits = await crypto.subtle.deriveBits(
 		{
 			name: "PBKDF2",
 			hash: "SHA-256",
-			salt: salt as BufferSource,
+			salt: saltCopy,
 			iterations,
 		},
 		key,

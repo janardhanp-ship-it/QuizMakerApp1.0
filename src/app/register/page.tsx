@@ -1,19 +1,21 @@
 import { redirect } from "next/navigation";
 
-import { RegisterForm } from "@/components/auth/register-form";
+import { SignupForm } from "@/components/signup-form";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function RegisterPage() {
+export default async function Page() {
 	const user = await getCurrentUser();
 	if (user) {
 		redirect("/quizzes");
 	}
 
 	return (
-		<main className="flex min-h-screen items-center justify-center bg-background p-6">
-			<RegisterForm />
-		</main>
+		<div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+			<div className="w-full max-w-sm">
+				<SignupForm />
+			</div>
+		</div>
 	);
 }

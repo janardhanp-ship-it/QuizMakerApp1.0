@@ -15,9 +15,9 @@ vi.mock("next/link", () => ({
 	),
 }));
 
-import { LoginForm } from "@/components/auth/login-form";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { RegisterForm } from "@/components/auth/register-form";
+import { LoginForm } from "@/components/login-form";
+import { SignupForm } from "@/components/signup-form";
 
 describe("Phase 4: auth UI", () => {
 	beforeEach(() => {
@@ -32,14 +32,15 @@ describe("Phase 4: auth UI", () => {
 
 	it("blocks register with an invalid username before calling the API", async () => {
 		const user = userEvent.setup();
-		render(<RegisterForm />);
+		render(<SignupForm />);
 		await user.type(screen.getByLabelText("First name"), "Ada");
 		await user.type(screen.getByLabelText("Last name"), "Lovelace");
 		await user.type(screen.getByLabelText("Username"), "ab");
 		await user.type(screen.getByLabelText("Email"), "ada@example.com");
 		await user.type(screen.getByLabelText("Password"), "correct-horse-battery");
-		await user.click(screen.getByRole("button", { name: "Register" }));
-		expect(await screen.findByText(/3–32 characters/i)).toBeTruthy();
+		await user.type(screen.getByLabelText("Confirm Password"), "correct-horse-battery");
+		await user.click(screen.getByRole("button", { name: "Create Account" }));
+		expect(await screen.findByText(/use 3–32 characters/i)).toBeTruthy();
 		expect(fetch).not.toHaveBeenCalled();
 	});
 
@@ -48,13 +49,14 @@ describe("Phase 4: auth UI", () => {
 		vi.mocked(fetch).mockResolvedValue(
 			new Response(JSON.stringify({ user: { id: "1", username: "ada" } }), { status: 201 }),
 		);
-		render(<RegisterForm />);
+		render(<SignupForm />);
 		await user.type(screen.getByLabelText("First name"), "Ada");
 		await user.type(screen.getByLabelText("Last name"), "Lovelace");
 		await user.type(screen.getByLabelText("Username"), "ada");
 		await user.type(screen.getByLabelText("Email"), "ada@example.com");
 		await user.type(screen.getByLabelText("Password"), "correct-horse-battery");
-		await user.click(screen.getByRole("button", { name: "Register" }));
+		await user.type(screen.getByLabelText("Confirm Password"), "correct-horse-battery");
+		await user.click(screen.getByRole("button", { name: "Create Account" }));
 		expect(fetch).toHaveBeenCalledWith(
 			"/api/auth/register",
 			expect.objectContaining({ method: "POST", credentials: "include" }),
@@ -72,9 +74,9 @@ describe("Phase 4: auth UI", () => {
 			}),
 		);
 		render(<LoginForm />);
-		await user.type(screen.getByLabelText("Username or email"), "ada");
+		await user.type(screen.getByLabelText("Email"), "ada");
 		await user.type(screen.getByLabelText("Password"), "wrong-password");
-		await user.click(screen.getByRole("button", { name: /^log in$/i }));
+		await user.click(screen.getByRole("button", { name: /^login$/i }));
 		expect(await screen.findByText("Invalid username/email or password")).toBeTruthy();
 		expect(screen.queryByText(/email not found/i)).toBeNull();
 		expect(push).not.toHaveBeenCalled();

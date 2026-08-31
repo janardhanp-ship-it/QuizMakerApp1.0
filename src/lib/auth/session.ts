@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 import { SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/lib/auth/constants";
 import { firstResult, getDb } from "@/lib/db";
@@ -30,7 +31,15 @@ function cookieOptions(maxAge: number) {
 	};
 }
 
-export async function createSession(userId: string): Promise<void> {
+export function applySessionCookie(response: NextResponse, token: string): void {
+	response.cookies.set(SESSION_COOKIE, token, cookieOptions(SESSION_TTL_SECONDS));
+}
+
+export function clearSessionCookie(response: NextResponse): void {
+	response.cookies.set(SESSION_COOKIE, "", cookieOptions(0));
+}
+
+export async function createSession(userId: string): Promise<string> {
 	const token = bytesToHex(crypto.getRandomValues(new Uint8Array(32)));
 	const tokenHash = await hashToken(token);
 	const now = new Date();
@@ -45,19 +54,18 @@ export async function createSession(userId: string): Promise<void> {
 		.bind(crypto.randomUUID(), userId, tokenHash, expiresAt, now.toISOString())
 		.run();
 
-	const store = await cookies();
-	store.set(SESSION_COOKIE, token, cookieOptions(SESSION_TTL_SECONDS));
+	return token;
 }
 
 export async function destroySession(): Promise<void> {
 	const store = await cookies();
 	const token = store.get(SESSION_COOKIE)?.value;
-	if (token) {
-		const tokenHash = await hashToken(token);
-		const db = await getDb();
-		await db.prepare("DELETE FROM sessions WHERE token_hash = ?1").bind(tokenHash).run();
+	if (!token) {
+		return;
 	}
-	store.set(SESSION_COOKIE, "", cookieOptions(0));
+	const tokenHash = await hashToken(token);
+	const db = await getDb();
+	await db.prepare("DELETE FROM sessions WHERE token_hash = ?1").bind(tokenHash).run();
 }
 
 export async function getCurrentUser(): Promise<PublicUser | null> {

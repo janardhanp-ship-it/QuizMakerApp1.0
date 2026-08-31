@@ -2,24 +2,29 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { type ComponentProps, type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
 	CardDescription,
-	CardFooter,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { validateEmail, validatePassword, validateUsername } from "@/lib/auth/validation";
 
 type FieldErrors = Record<string, string>;
 
-export function RegisterForm() {
+export function SignupForm({ ...props }: ComponentProps<typeof Card>) {
 	const router = useRouter();
 	const [pending, setPending] = useState(false);
 	const [formError, setFormError] = useState<string | null>(null);
@@ -34,10 +39,15 @@ export function RegisterForm() {
 		validateUsername(String(form.get("username") ?? ""), errors);
 		validateEmail(String(form.get("email") ?? ""), errors);
 		validatePassword(form.get("password"), errors, true);
+		const password = String(form.get("password") ?? "");
+		const confirmPassword = String(form.get("confirmPassword") ?? "");
+		if (confirmPassword !== password) {
+			errors.confirmPassword = "Passwords do not match";
+		}
 		return errors;
 	}
 
-	async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+	async function onSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		setFormError(null);
 		const form = new FormData(event.currentTarget);
@@ -77,35 +87,67 @@ export function RegisterForm() {
 	}
 
 	return (
-		<Card className="w-full max-w-md">
+		<Card {...props}>
 			<CardHeader>
 				<CardTitle>Create an account</CardTitle>
-				<CardDescription>Register to take MCQ quizzes.</CardDescription>
+				<CardDescription>Enter your information below to create your account</CardDescription>
 			</CardHeader>
-			<form onSubmit={onSubmit}>
-				<CardContent>
+			<CardContent>
+				<form onSubmit={onSubmit}>
 					<FieldGroup>
-						<Field data-invalid={!!fieldErrors.firstName || undefined}>
+						<Field data-invalid={fieldErrors.firstName ? "true" : undefined}>
 							<FieldLabel htmlFor="firstName">First name</FieldLabel>
-							<Input id="firstName" name="firstName" autoComplete="given-name" required />
+							<Input
+								id="firstName"
+								name="firstName"
+								type="text"
+								placeholder="Ada"
+								autoComplete="given-name"
+								required
+							/>
 							<FieldError errors={[{ message: fieldErrors.firstName }]} />
 						</Field>
-						<Field data-invalid={!!fieldErrors.lastName || undefined}>
+						<Field data-invalid={fieldErrors.lastName ? "true" : undefined}>
 							<FieldLabel htmlFor="lastName">Last name</FieldLabel>
-							<Input id="lastName" name="lastName" autoComplete="family-name" required />
+							<Input
+								id="lastName"
+								name="lastName"
+								type="text"
+								placeholder="Lovelace"
+								autoComplete="family-name"
+								required
+							/>
 							<FieldError errors={[{ message: fieldErrors.lastName }]} />
 						</Field>
-						<Field data-invalid={!!fieldErrors.username || undefined}>
+						<Field data-invalid={fieldErrors.username ? "true" : undefined}>
 							<FieldLabel htmlFor="username">Username</FieldLabel>
-							<Input id="username" name="username" autoComplete="username" required />
+							<Input
+								id="username"
+								name="username"
+								type="text"
+								placeholder="ada"
+								autoComplete="username"
+								required
+							/>
+							<FieldDescription>3–32 characters: lowercase letters, numbers, and underscores.</FieldDescription>
 							<FieldError errors={[{ message: fieldErrors.username }]} />
 						</Field>
-						<Field data-invalid={!!fieldErrors.email || undefined}>
+						<Field data-invalid={fieldErrors.email ? "true" : undefined}>
 							<FieldLabel htmlFor="email">Email</FieldLabel>
-							<Input id="email" name="email" type="email" autoComplete="email" required />
+							<Input
+								id="email"
+								name="email"
+								type="email"
+								placeholder="m@example.com"
+								autoComplete="email"
+								required
+							/>
+							<FieldDescription>
+								We&apos;ll use this to contact you. We will not share your email with anyone else.
+							</FieldDescription>
 							<FieldError errors={[{ message: fieldErrors.email }]} />
 						</Field>
-						<Field data-invalid={!!fieldErrors.password || undefined}>
+						<Field data-invalid={fieldErrors.password ? "true" : undefined}>
 							<FieldLabel htmlFor="password">Password</FieldLabel>
 							<Input
 								id="password"
@@ -115,23 +157,39 @@ export function RegisterForm() {
 								required
 								minLength={8}
 							/>
+							<FieldDescription>Must be at least 8 characters long.</FieldDescription>
 							<FieldError errors={[{ message: fieldErrors.password }]} />
 						</Field>
+						<Field data-invalid={fieldErrors.confirmPassword ? "true" : undefined}>
+							<FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
+							<Input
+								id="confirm-password"
+								name="confirmPassword"
+								type="password"
+								autoComplete="new-password"
+								required
+								minLength={8}
+							/>
+							<FieldDescription>Please confirm your password.</FieldDescription>
+							<FieldError errors={[{ message: fieldErrors.confirmPassword }]} />
+						</Field>
 						{formError ? <FieldError>{formError}</FieldError> : null}
+						<FieldGroup>
+							<Field>
+								<Button type="submit" className="w-full" disabled={pending}>
+									{pending ? "Creating account…" : "Create Account"}
+								</Button>
+								<FieldDescription className="px-6 text-center">
+									Already have an account?{" "}
+									<Link href="/login" className="underline-offset-4 hover:underline">
+										Sign in
+									</Link>
+								</FieldDescription>
+							</Field>
+						</FieldGroup>
 					</FieldGroup>
-				</CardContent>
-				<CardFooter className="flex flex-col items-stretch gap-3">
-					<Button type="submit" disabled={pending}>
-						{pending ? "Creating account…" : "Register"}
-					</Button>
-					<p className="text-center text-sm text-muted-foreground">
-						Already have an account?{" "}
-						<Link href="/login" className="text-primary underline-offset-4 hover:underline">
-							Log in
-						</Link>
-					</p>
-				</CardFooter>
-			</form>
+				</form>
+			</CardContent>
 		</Card>
 	);
 }

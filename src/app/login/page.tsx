@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 
-import { LoginForm } from "@/components/auth/login-form";
+import { LoginForm } from "@/components/login-form";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage({
+export default async function Page({
 	searchParams,
 }: {
 	searchParams: Promise<{ next?: string }>;
@@ -17,8 +17,10 @@ export default async function LoginPage({
 	const { next } = await searchParams;
 
 	return (
-		<main className="flex min-h-screen items-center justify-center bg-background p-6">
-			<LoginForm nextPath={next} />
-		</main>
+		<div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+			<div className="w-full max-w-sm">
+				<LoginForm nextPath={next} />
+			</div>
+		</div>
 	);
 }

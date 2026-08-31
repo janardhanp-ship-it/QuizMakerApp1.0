@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createSession, destroySession, getCurrentUser, userService } = vi.hoisted(() => ({
-	createSession: vi.fn(),
-	destroySession: vi.fn(),
-	getCurrentUser: vi.fn(),
-	userService: {
-		create: vi.fn(),
-		getRecordForLogin: vi.fn(),
-	},
-}));
+const { applySessionCookie, clearSessionCookie, createSession, destroySession, getCurrentUser, userService } =
+	vi.hoisted(() => ({
+		applySessionCookie: vi.fn(),
+		clearSessionCookie: vi.fn(),
+		createSession: vi.fn(),
+		destroySession: vi.fn(),
+		getCurrentUser: vi.fn(),
+		userService: {
+			create: vi.fn(),
+			getRecordForLogin: vi.fn(),
+		},
+	}));
 
 vi.mock("@/lib/auth/session", () => ({
+	applySessionCookie,
+	clearSessionCookie,
 	createSession,
 	destroySession,
 	getCurrentUser,
@@ -49,6 +54,7 @@ describe("Phase 3: auth HTTP endpoints", () => {
 
 	it("registers through the user service, starts a session, and omits the password", async () => {
 		userService.create.mockResolvedValue(publicUser);
+		createSession.mockResolvedValue("session-token");
 		const response = await register(
 			jsonRequest("http://localhost/api/auth/register", {
 				firstName: "Ada",
@@ -99,6 +105,7 @@ describe("Phase 3: auth HTTP endpoints", () => {
 
 	it("logs in with a valid password and starts a session", async () => {
 		const password = "correct-horse-battery";
+		createSession.mockResolvedValue("session-token");
 		userService.getRecordForLogin.mockResolvedValue({
 			user: publicUser,
 			passwordHash: await hashPassword(password),

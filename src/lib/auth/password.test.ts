@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { hashPassword, PBKDF2_ITERATIONS, verifyPassword } from "@/lib/auth/password";
 import { parseLoginBody, parseRegisterBody, parseUpdateInput } from "@/lib/auth/validation";
 import { ValidationError } from "@/lib/users/errors";
 
@@ -16,7 +16,7 @@ describe("Phase 2: password hashing", () => {
 	it("stores a salted PBKDF2 hash that does not contain the plaintext password", async () => {
 		const password = "correct-horse-battery";
 		const hash = await hashPassword(password);
-		expect(hash.startsWith("pbkdf2-sha256:310000:")).toBe(true);
+		expect(hash.startsWith(`pbkdf2-sha256:${PBKDF2_ITERATIONS}:`)).toBe(true);
 		expect(hash).not.toContain(password);
 		expect(await verifyPassword(password, hash)).toBe(true);
 		expect(await verifyPassword("wrong-password", hash)).toBe(false);

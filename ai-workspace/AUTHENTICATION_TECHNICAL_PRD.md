@@ -350,8 +350,8 @@ Commands: `npm run test` (CI / phase gate), `npm run test:watch` (while implemen
 - `src/app/api/auth/login/route.ts`
 - `src/app/api/auth/logout/route.ts`
 - `src/app/api/auth/me/route.ts`
-- `src/app/register/page.tsx` / `src/components/auth/register-form.tsx`
-- `src/app/login/page.tsx` / `src/components/auth/login-form.tsx`
+- `src/app/register/page.tsx` / `src/components/signup-form.tsx` — shadcn signup block; first/last name, username, email, password, confirm password (client-only)
+- `src/app/login/page.tsx` / `src/components/login-form.tsx` — shadcn login block; identifier field labeled Email (username or email)
 - `src/app/quizzes/page.tsx` — MCQ stub; gated with `getCurrentUser()` (not middleware)
 - `src/lib/test/fake-d1.ts` — In-memory D1 stand-in for unit tests
 - `src/lib/users/schema.test.ts` — Phase 1
@@ -402,7 +402,7 @@ Register and login **must** call this service (or the same module’s functions)
 
 ### Password hashing
 
-Cloudflare Workers is not Node. Prefer **Web Crypto** (PBKDF2-SHA-256, unique salt per user, high iteration count, e.g. 310_000 or current OWASP recommendation) encoded as a single string (`algorithm:iterations:salt:hash`) so no native addon is required.
+Cloudflare Workers is not Node. Prefer **Web Crypto** (PBKDF2-SHA-256, unique salt per user) encoded as `algorithm:iterations:salt:hash`. Use **60_000** iterations in this app: OWASP-scale counts (e.g. 310_000) exceed Workers CPU limits and make `/api/auth/register` return 500. `verifyPassword` still honors the iteration count stored in the hash.
 
 If a library is proposed later (e.g. a pure-JS bcrypt), **ask before adding the dependency** per project working agreements.
 
@@ -540,6 +540,12 @@ Populate during implementation. Starter entries:
 **Problem**: Login succeeds in JSON but `/quizzes` still redirects to login.
 **Cause**: Cookie `Secure` on HTTP localhost, wrong `Path`, or client fetch without `credentials: 'include'`.
 **Solution**: Align cookie flags with local preview URL; use same-origin fetch with credentials.
+
+### Register returns 500 on Cloudflare Workers
+
+**Problem**: UI shows “Something went wrong”; remote `users` table stays empty.
+**Cause**: PBKDF2 at 310_000 iterations exceeds Worker CPU time, so hashing never finishes and no row is inserted.
+**Solution**: Hash with 60_000 iterations (`src/lib/auth/password.ts`). Set the session cookie on `NextResponse` rather than `cookies().set()` from `next/headers`.
 
 ### New App Router pages return 404 in `next dev`
 

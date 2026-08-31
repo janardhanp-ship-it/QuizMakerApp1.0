@@ -1,10 +1,16 @@
+import { NextResponse } from "next/server";
+
 import { handleAuthError } from "@/lib/auth/http";
-import { destroySession } from "@/lib/auth/session";
+import { clearSessionCookie, destroySession } from "@/lib/auth/session";
+
+export const dynamic = "force-dynamic";
 
 export async function POST() {
 	try {
 		await destroySession();
-		return Response.json({ ok: true });
+		const response = NextResponse.json({ ok: true });
+		clearSessionCookie(response);
+		return response;
 	} catch (error) {
 		return handleAuthError(error);
 	}

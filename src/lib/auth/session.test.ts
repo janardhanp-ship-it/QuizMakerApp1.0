@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SESSION_COOKIE } from "@/lib/auth/constants";
@@ -27,7 +28,13 @@ vi.mock("@/lib/users/user-service", () => ({
 }));
 
 import { getDb } from "@/lib/db";
-import { createSession, destroySession, getCurrentUser, hashToken } from "@/lib/auth/session";
+import {
+	applySessionCookie,
+	createSession,
+	destroySession,
+	getCurrentUser,
+	hashToken,
+} from "@/lib/auth/session";
 import { userService } from "@/lib/users/user-service";
 
 const getDbMock = vi.mocked(getDb);
@@ -45,20 +52,21 @@ describe("Phase 3: sessions", () => {
 		expect(hash).toMatch(/^[0-9a-f]+$/);
 	});
 
-	it("inserts a hashed token and sets the HttpOnly cookie to the raw token", async () => {
+	it("inserts a hashed token and returns the raw cookie value", async () => {
 		const db = createFakeD1();
 		getDbMock.mockResolvedValue(db as never);
-		await createSession("user-1");
+		const rawCookie = await createSession("user-1");
 		expect(db.sessions).toHaveLength(1);
-		const rawCookie = cookieStore.set.mock.calls[0]?.[1] as string;
 		expect(rawCookie).toMatch(/^[0-9a-f]+$/);
 		expect(db.sessions[0]?.token_hash).toBe(await hashToken(rawCookie));
 		expect(db.sessions[0]?.token_hash).not.toBe(rawCookie);
-		expect(cookieStore.set).toHaveBeenCalledWith(
-			SESSION_COOKIE,
-			rawCookie,
-			expect.objectContaining({ httpOnly: true, path: "/", sameSite: "lax" }),
-		);
+	});
+
+	it("sets an HttpOnly session cookie on the HTTP response", () => {
+		const response = NextResponse.json({ ok: true });
+		applySessionCookie(response, "ab".repeat(32));
+		expect(response.cookies.get(SESSION_COOKIE)?.value).toBe("ab".repeat(32));
+		expect(response.cookies.get(SESSION_COOKIE)?.httpOnly).toBe(true);
 	});
 
 	it("returns null when there is no session cookie", async () => {
@@ -69,8 +77,7 @@ describe("Phase 3: sessions", () => {
 	it("loads the user for a valid unexpired session", async () => {
 		const db = createFakeD1();
 		getDbMock.mockResolvedValue(db as never);
-		await createSession("user-1");
-		const rawCookie = cookieStore.set.mock.calls[0]?.[1] as string;
+		const rawCookie = await createSession("user-1");
 		cookieStore.get.mockReturnValue({ value: rawCookie });
 		vi.mocked(userService.getById).mockResolvedValue({
 			id: "user-1",
@@ -83,18 +90,12 @@ describe("Phase 3: sessions", () => {
 		expect(user?.id).toBe("user-1");
 	});
 
-	it("deletes the stored session and clears the cookie on logout", async () => {
+	it("deletes the stored session on logout", async () => {
 		const db = createFakeD1();
 		getDbMock.mockResolvedValue(db as never);
-		await createSession("user-1");
-		const rawCookie = cookieStore.set.mock.calls[0]?.[1] as string;
+		const rawCookie = await createSession("user-1");
 		cookieStore.get.mockReturnValue({ value: rawCookie });
 		await destroySession();
 		expect(db.sessions).toHaveLength(0);
-		expect(cookieStore.set).toHaveBeenCalledWith(
-			SESSION_COOKIE,
-			"",
-			expect.objectContaining({ maxAge: 0 }),
-		);
 	});
 });
