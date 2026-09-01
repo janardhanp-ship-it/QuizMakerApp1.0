@@ -365,7 +365,7 @@ Commands: `npm run test` (CI / phase gate), `npm run test:watch` (while implemen
 - MCQ service used by routes; no `env.DB` in React
 - Phase 2 tests green
 
-### Phase 3: MCQ HTTP endpoints - PLANNED
+### Phase 3: MCQ HTTP endpoints - COMPLETED
 
 **Objective**: JSON APIs for CRUD and attempts, session required.
 
@@ -383,7 +383,7 @@ Commands: `npm run test` (CI / phase gate), `npm run test:watch` (while implemen
 - Working JSON APIs
 - Phase 3 tests green
 
-### Phase 4: List, form, preview UI - PLANNED
+### Phase 4: List, form, preview UI - COMPLETED
 
 **Objective**: A signed-in user can create, edit, preview, and delete questions from `/quizzes`.
 
@@ -521,17 +521,17 @@ Validation lives in `src/lib/mcqs/validation.ts` (same style as `src/lib/auth/va
 - [x] Local D1 has `mcqs`, `choices`, and `attempts` with the columns and foreign keys in this PRD
 - [x] MCQ service can create, update, and delete questions and their choices; routes do not contain SQL
 - [x] Creating a question requires 2–6 choices and exactly one correct choice
-- [ ] The create form shows two choices by default and can add up to six
-- [ ] `GET /api/mcqs` returns name, question, and `isOwner` for the table
-- [ ] `POST /api/mcqs` and `PUT /api/mcqs/:id` persist through the service and require a session
-- [ ] Non-owners receive 403 on GET (edit), PUT, and DELETE
-- [ ] `DELETE /api/mcqs/:id` removes the question and cascaded rows
-- [ ] Preview payload omits which choice is correct; submitting an attempt stores `choice_id` and `is_correct`
-- [ ] `/quizzes` shows a shadcn table (Name, Question, Actions) and a Create button
-- [ ] Actions use a vertical ellipsis dropdown: Edit, Preview, Delete
-- [ ] Create/edit page has Save (persist) and Cancel (back to list without save)
-- [ ] Unauthenticated visits to `/quizzes` still redirect to login
-- [ ] `npm run lint`, `npm run test`, and `npm run build` pass after implementation
+- [x] The create form shows two choices by default and can add up to six
+- [x] `GET /api/mcqs` returns name, question, and `isOwner` for the table
+- [x] `POST /api/mcqs` and `PUT /api/mcqs/:id` persist through the service and require a session
+- [x] Non-owners receive 403 on GET (edit), PUT, and DELETE
+- [x] `DELETE /api/mcqs/:id` removes the question and cascaded rows
+- [x] Preview payload omits which choice is correct; submitting an attempt stores `choice_id` and `is_correct`
+- [x] `/quizzes` shows a shadcn table (Name, Question, Actions) and a Create button
+- [x] Actions use a vertical ellipsis dropdown: Edit, Preview, Delete
+- [x] Create/edit page has Save (persist) and Cancel (back to list without save)
+- [x] Unauthenticated visits to `/quizzes` still redirect to login
+- [x] `npm run lint`, `npm run test`, and `npm run build` pass after implementation
 
 ---
 
@@ -646,6 +646,6 @@ When working with this PRD:
 ## Current Status
 
 **Last Updated**: 2026-09-01
-**Current Phase**: Phase 2 - MCQ service
+**Current Phase**: Phase 4 - List, form, preview UI
 **Status**: COMPLETED
-**Next Steps**: Wait for review and approval before Phase 3 (MCQ HTTP endpoints).
+**Next Steps**: Confirm create/edit/preview in the browser on `npm run dev`. Remote D1 migration is still a human decision.

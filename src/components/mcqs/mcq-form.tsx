@@ -31,6 +31,7 @@ export function McqForm({
 	);
 	const [fields, setFields] = useState<Record<string, string>>({});
 	const [formError, setFormError] = useState<string | null>(null);
+	const [choicesLocked, setChoicesLocked] = useState(false);
 	const [saving, setSaving] = useState(false);
 
 	function setCorrect(index: number) {
@@ -67,25 +68,31 @@ export function McqForm({
 		setFields({});
 		setFormError(null);
 		const url = mode === "create" ? "/api/mcqs" : `/api/mcqs/${mcq?.id}`;
+		const payload = { name, question, ...(choicesLocked ? {} : { choices }) };
 		const response = await fetch(url, {
 			method: mode === "create" ? "POST" : "PUT",
 			credentials: "include",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name, question, choices }),
+			body: JSON.stringify(payload),
 		});
 		setSaving(false);
 		if (response.ok) {
 			router.push("/quizzes");
 			return;
 		}
-		const payload = (await response.json().catch(() => ({}))) as {
+		if (response.status === 409 && mode === "edit" && !choicesLocked) {
+			setChoicesLocked(true);
+			setFormError("Choices cannot be changed after someone has practiced this question. Save again to update the name and question only.");
+			return;
+		}
+		const errorPayload = (await response.json().catch(() => ({}))) as {
 			error?: string;
 			fields?: Record<string, string>;
 		};
-		if (payload.fields) {
-			setFields(payload.fields);
+		if (errorPayload.fields) {
+			setFields(errorPayload.fields);
 		}
-		setFormError(payload.error ?? "Could not save this question.");
+		setFormError(errorPayload.error ?? "Could not save this question.");
 	}
 
 	return (
@@ -112,9 +119,13 @@ export function McqForm({
 				</Field>
 			</FieldGroup>
 
-			<fieldset className="space-y-4">
+			<fieldset className="space-y-4" disabled={choicesLocked}>
 				<legend className="font-medium">Choices</legend>
-				<p className="text-sm text-muted-foreground">Add 2 to 6 choices and mark exactly one as correct.</p>
+				<p className="text-sm text-muted-foreground">
+					{choicesLocked
+						? "Choices are locked because this question already has attempts."
+						: "Add 2 to 6 choices and mark exactly one as correct."}
+				</p>
 				{choices.map((choice, index) => (
 					<div key={index} className="flex flex-col gap-2 sm:flex-row sm:items-end">
 						<Field className="flex-1">
@@ -145,7 +156,7 @@ export function McqForm({
 						</div>
 					</div>
 				))}
-				<Button type="button" variant="outline" onClick={addChoice} disabled={choices.length >= 6}>
+				<Button type="button" variant="outline" onClick={addChoice} disabled={choicesLocked || choices.length >= 6}>
 					Add choice
 				</Button>
 			</fieldset>

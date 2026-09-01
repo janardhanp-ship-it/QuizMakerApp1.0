@@ -17,6 +17,7 @@ vi.mock("next/link", () => ({
 
 import { McqForm } from "@/components/mcqs/mcq-form";
 import { McqList } from "@/components/mcqs/mcq-list";
+import { McqPreview } from "@/components/mcqs/mcq-preview";
 
 const sample = {
 	id: "mcq-1",
@@ -27,7 +28,7 @@ const sample = {
 	isOwner: true,
 };
 
-describe("Phase 5: MCQ UI", () => {
+describe("Phase 4: MCQ UI", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.stubGlobal("fetch", vi.fn());
@@ -51,7 +52,16 @@ describe("Phase 5: MCQ UI", () => {
 	it("shows an empty state when there are no questions", () => {
 		render(<McqList items={[]} />);
 		expect(screen.getByText(/no multiple choice questions yet/i)).toBeTruthy();
-		expect(screen.getByRole("link", { name: /create/i })).toBeTruthy();
+		expect(screen.getAllByRole("link", { name: /create/i }).length).toBeGreaterThanOrEqual(1);
+	});
+
+	it("hides edit and delete when the viewer is not the owner", async () => {
+		const user = userEvent.setup();
+		render(<McqList items={[{ ...sample, isOwner: false }]} />);
+		await user.click(screen.getByRole("button", { name: /actions for photosynthesis/i }));
+		expect(await screen.findByRole("menuitem", { name: /^preview$/i })).toBeTruthy();
+		expect(screen.queryByRole("menuitem", { name: /^edit$/i })).toBeNull();
+		expect(screen.queryByRole("menuitem", { name: /^delete$/i })).toBeNull();
 	});
 
 	it("opens row actions with edit, preview, and delete", async () => {
@@ -124,5 +134,61 @@ describe("Phase 5: MCQ UI", () => {
 		await user.click(screen.getByRole("button", { name: /^cancel$/i }));
 		expect(fetch).not.toHaveBeenCalled();
 		expect(push).toHaveBeenCalledWith("/quizzes");
+	});
+
+	it("locks choices on 409 and saves name and question only on the next save", async () => {
+		const user = userEvent.setup();
+		vi.mocked(fetch)
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ error: "Cannot edit choices after attempts exist" }), { status: 409 }),
+			)
+			.mockResolvedValueOnce(new Response(JSON.stringify({ mcq: { id: "mcq-1" } }), { status: 200 }));
+		render(
+			<McqForm
+				mode="edit"
+				mcq={{
+					...sample,
+					choices: [
+						{ id: "c1", body: "Oxygen", isCorrect: false, position: 0 },
+						{ id: "c2", body: "Carbon dioxide", isCorrect: true, position: 1 },
+					],
+				}}
+			/>,
+		);
+		await user.click(screen.getByRole("button", { name: /^save$/i }));
+		expect(await screen.findByText(/choices cannot be changed/i)).toBeTruthy();
+		await user.click(screen.getByRole("button", { name: /^save$/i }));
+		const secondBody = JSON.parse(vi.mocked(fetch).mock.calls[1][1]?.body as string);
+		expect(secondBody).toEqual({ name: "Photosynthesis", question: "Which gas do plants absorb?" });
+		await vi.waitFor(() => {
+			expect(push).toHaveBeenCalledWith("/quizzes");
+		});
+	});
+
+	it("submits a preview attempt and shows correctness from the API", async () => {
+		const user = userEvent.setup();
+		vi.mocked(fetch).mockResolvedValue(
+			new Response(JSON.stringify({ attempt: { isCorrect: true } }), { status: 201 }),
+		);
+		render(
+			<McqPreview
+				mcq={{
+					...sample,
+					choices: [
+						{ id: "c1", body: "Oxygen", position: 0 },
+						{ id: "c2", body: "Carbon dioxide", position: 1 },
+					],
+				}}
+			/>,
+		);
+		expect(screen.getByText("Which gas do plants absorb?")).toBeTruthy();
+		await user.click(screen.getByLabelText(/choice 2: carbon dioxide/i));
+		await user.click(screen.getByRole("button", { name: /^submit$/i }));
+		expect(fetch).toHaveBeenCalledWith(
+			"/api/mcqs/mcq-1/attempts",
+			expect.objectContaining({ method: "POST", credentials: "include" }),
+		);
+		expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toEqual({ choiceId: "c2" });
+		expect(await screen.findByText("Correct")).toBeTruthy();
 	});
 });

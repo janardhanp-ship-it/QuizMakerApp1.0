@@ -58,7 +58,7 @@ function jsonRequest(url: string, method: string, body?: unknown) {
 
 const idContext = { params: Promise.resolve({ id: "mcq-1" }) };
 
-describe("Phase 4: MCQ HTTP endpoints", () => {
+describe("Phase 3: MCQ HTTP endpoints", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		getCurrentUser.mockResolvedValue(user);
@@ -69,6 +69,46 @@ describe("Phase 4: MCQ HTTP endpoints", () => {
 		const response = await listMcqs();
 		expect(response.status).toBe(401);
 		expect(mcqService.list).not.toHaveBeenCalled();
+	});
+
+	it("returns 401 on mutate and preview routes without a session", async () => {
+		getCurrentUser.mockResolvedValue(null);
+		const createResponse = await createMcq(
+			jsonRequest("http://localhost/api/mcqs", "POST", {
+				name: "Photosynthesis",
+				question: "Which gas?",
+				choices: [
+					{ body: "Oxygen", isCorrect: false },
+					{ body: "CO2", isCorrect: true },
+				],
+			}),
+		);
+		const getResponse = await getMcq(jsonRequest("http://localhost/api/mcqs/mcq-1", "GET"), idContext);
+		const putResponse = await updateMcq(
+			jsonRequest("http://localhost/api/mcqs/mcq-1", "PUT", {
+				name: "Photosynthesis",
+				question: "Which gas?",
+			}),
+			idContext,
+		);
+		const deleteResponse = await deleteMcq(jsonRequest("http://localhost/api/mcqs/mcq-1", "DELETE"), idContext);
+		const previewResponse = await previewMcq(
+			jsonRequest("http://localhost/api/mcqs/mcq-1/preview", "GET"),
+			idContext,
+		);
+		const attemptResponse = await createAttempt(
+			jsonRequest("http://localhost/api/mcqs/mcq-1/attempts", "POST", { choiceId: "c2" }),
+			idContext,
+		);
+		expect(createResponse.status).toBe(401);
+		expect(getResponse.status).toBe(401);
+		expect(putResponse.status).toBe(401);
+		expect(deleteResponse.status).toBe(401);
+		expect(previewResponse.status).toBe(401);
+		expect(attemptResponse.status).toBe(401);
+		expect(mcqService.create).not.toHaveBeenCalled();
+		expect(mcqService.update).not.toHaveBeenCalled();
+		expect(mcqService.delete).not.toHaveBeenCalled();
 	});
 
 	it("lists MCQs with isOwner for the current user", async () => {
@@ -97,6 +137,10 @@ describe("Phase 4: MCQ HTTP endpoints", () => {
 		);
 		expect(response.status).toBe(201);
 		expect(await response.json()).toEqual({ mcq });
+		expect(mcqService.create).toHaveBeenCalledWith(
+			"user-1",
+			expect.objectContaining({ name: "Photosynthesis", question: "Which gas?" }),
+		);
 	});
 
 	it("returns 400 when create validation fails", async () => {
@@ -111,6 +155,14 @@ describe("Phase 4: MCQ HTTP endpoints", () => {
 		expect(mcqService.create).not.toHaveBeenCalled();
 	});
 
+	it("returns the owner payload for GET", async () => {
+		mcqService.getByIdForOwner.mockResolvedValue(mcq);
+		const response = await getMcq(jsonRequest("http://localhost/api/mcqs/mcq-1", "GET"), idContext);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ mcq });
+		expect(mcqService.getByIdForOwner).toHaveBeenCalledWith("mcq-1", "user-1");
+	});
+
 	it("returns 403 when the viewer is not the owner", async () => {
 		mcqService.getByIdForOwner.mockRejectedValue(new McqForbiddenError());
 		const response = await getMcq(jsonRequest("http://localhost/api/mcqs/mcq-1", "GET"), idContext);
@@ -121,6 +173,38 @@ describe("Phase 4: MCQ HTTP endpoints", () => {
 		mcqService.getByIdForOwner.mockRejectedValue(new McqNotFoundError());
 		const response = await getMcq(jsonRequest("http://localhost/api/mcqs/mcq-1", "GET"), idContext);
 		expect(response.status).toBe(404);
+	});
+
+	it("updates through the service", async () => {
+		mcqService.update.mockResolvedValue(mcq);
+		const response = await updateMcq(
+			jsonRequest("http://localhost/api/mcqs/mcq-1", "PUT", {
+				name: "Photosynthesis",
+				question: "Which gas?",
+				choices: [
+					{ body: "Oxygen", isCorrect: false },
+					{ body: "CO2", isCorrect: true },
+				],
+			}),
+			idContext,
+		);
+		expect(response.status).toBe(200);
+		expect(mcqService.update).toHaveBeenCalledWith("mcq-1", "user-1", expect.objectContaining({ name: "Photosynthesis" }));
+	});
+
+	it("returns 403 on PUT and DELETE for a non-owner", async () => {
+		mcqService.update.mockRejectedValue(new McqForbiddenError());
+		mcqService.delete.mockRejectedValue(new McqForbiddenError());
+		const putResponse = await updateMcq(
+			jsonRequest("http://localhost/api/mcqs/mcq-1", "PUT", {
+				name: "Photosynthesis",
+				question: "Which gas?",
+			}),
+			idContext,
+		);
+		const deleteResponse = await deleteMcq(jsonRequest("http://localhost/api/mcqs/mcq-1", "DELETE"), idContext);
+		expect(putResponse.status).toBe(403);
+		expect(deleteResponse.status).toBe(403);
 	});
 
 	it("returns 409 when update is blocked by attempts", async () => {
@@ -180,6 +264,7 @@ describe("Phase 4: MCQ HTTP endpoints", () => {
 		);
 		expect(response.status).toBe(201);
 		expect(mcqService.createAttempt).toHaveBeenCalledWith("user-1", "mcq-1", "c2");
+		expect(mcqService.createAttempt.mock.calls[0]).toHaveLength(3);
 	});
 
 	it("maps a missing choice on attempt to 404", async () => {

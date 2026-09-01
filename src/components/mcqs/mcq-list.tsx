@@ -66,7 +66,12 @@ export function McqList({ items }: { items: McqListItem[] }) {
 			</div>
 			{error ? <p className="text-sm text-destructive">{error}</p> : null}
 			{items.length === 0 ? (
-				<p className="text-muted-foreground">No multiple choice questions yet. Create one to get started.</p>
+				<div className="space-y-3">
+					<p className="text-muted-foreground">No multiple choice questions yet. Create one to get started.</p>
+					<Link href="/quizzes/new" className={cn(buttonVariants())}>
+						Create
+					</Link>
+				</div>
 			) : (
 				<Table>
 					<TableHeader>

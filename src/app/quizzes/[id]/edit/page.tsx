@@ -3,20 +3,29 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/auth/app-header";
 import { McqForm } from "@/components/mcqs/mcq-form";
 import { getCurrentUser } from "@/lib/auth/session";
+import { McqForbiddenError, McqNotFoundError } from "@/lib/mcqs/errors";
 import { mcqService } from "@/lib/mcqs/mcq-service";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditMcqPage({ params }: { params: Promise<{ id: string }> }) {
 	const user = await getCurrentUser();
+	const { id } = await params;
 	if (!user) {
-		redirect("/login?next=/quizzes");
+		redirect(`/login?next=/quizzes/${id}/edit`);
 	}
 
-	const { id } = await params;
-	const mcq = await mcqService.getByIdForOwner(id, user.id).catch(() => null);
-	if (!mcq) {
-		notFound();
+	let mcq;
+	try {
+		mcq = await mcqService.getByIdForOwner(id, user.id);
+	} catch (error) {
+		if (error instanceof McqForbiddenError) {
+			redirect("/quizzes");
+		}
+		if (error instanceof McqNotFoundError) {
+			notFound();
+		}
+		throw error;
 	}
 
 	return (
