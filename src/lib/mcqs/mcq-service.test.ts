@@ -180,4 +180,38 @@ describe("Phase 2: MCQ service", () => {
 		expect(preview.choices[0]).not.toHaveProperty("isCorrect");
 		expect(JSON.stringify(preview)).not.toMatch(/isCorrect/);
 	});
+
+	it("cascades choices and attempts when the MCQ is deleted", async () => {
+		const db = createFakeD1();
+		getDbMock.mockResolvedValue(db as never);
+		const created = await mcqService.create("user-1", {
+			name: "Gone",
+			question: "Stem",
+			choices: twoChoices,
+		});
+		await mcqService.createAttempt("user-9", created.id, created.choices[0].id);
+		expect(db.choices.length).toBeGreaterThan(0);
+		expect(db.attempts.length).toBe(1);
+		await mcqService.delete(created.id, "user-1");
+		expect(db.mcqs).toHaveLength(0);
+		expect(db.choices).toHaveLength(0);
+		expect(db.attempts).toHaveLength(0);
+	});
+
+	it("rejects a blank name or question", async () => {
+		await expect(
+			mcqService.create("user-1", {
+				name: "   ",
+				question: "Stem",
+				choices: twoChoices,
+			}),
+		).rejects.toBeInstanceOf(ValidationError);
+		await expect(
+			mcqService.create("user-1", {
+				name: "Title",
+				question: "   ",
+				choices: twoChoices,
+			}),
+		).rejects.toBeInstanceOf(ValidationError);
+	});
 });

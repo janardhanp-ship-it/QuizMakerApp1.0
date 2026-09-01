@@ -345,7 +345,7 @@ Commands: `npm run test` (CI / phase gate), `npm run test:watch` (while implemen
 - Local schema applied
 - Phase 1 tests green
 
-### Phase 2: MCQ service - PLANNED
+### Phase 2: MCQ service - COMPLETED
 
 **Objective**: All MCQ, choice, and attempt persistence goes through one server module.
 
@@ -519,8 +519,8 @@ Validation lives in `src/lib/mcqs/validation.ts` (same style as `src/lib/auth/va
 ## Acceptance Criteria
 
 - [x] Local D1 has `mcqs`, `choices`, and `attempts` with the columns and foreign keys in this PRD
-- [ ] MCQ service can create, update, and delete questions and their choices; routes do not contain SQL
-- [ ] Creating a question requires 2–6 choices and exactly one correct choice
+- [x] MCQ service can create, update, and delete questions and their choices; routes do not contain SQL
+- [x] Creating a question requires 2–6 choices and exactly one correct choice
 - [ ] The create form shows two choices by default and can add up to six
 - [ ] `GET /api/mcqs` returns name, question, and `isOwner` for the table
 - [ ] `POST /api/mcqs` and `PUT /api/mcqs/:id` persist through the service and require a session
@@ -646,6 +646,6 @@ When working with this PRD:
 ## Current Status
 
 **Last Updated**: 2026-09-01
-**Current Phase**: Phase 1 - MCQ schema
+**Current Phase**: Phase 2 - MCQ service
 **Status**: COMPLETED
-**Next Steps**: Wait for review and approval before Phase 2 (MCQ service). Do not start Phase 2, API, or UI until then.
+**Next Steps**: Wait for review and approval before Phase 3 (MCQ HTTP endpoints).

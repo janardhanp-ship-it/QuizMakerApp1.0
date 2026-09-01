@@ -240,5 +240,12 @@ export function createFakeD1() {
 					run: () => bound().run(),
 				};
 			},
+		async batch(statements: { run: () => Promise<unknown> }[]) {
+			const results = [];
+			for (const statement of statements) {
+				results.push(await statement.run());
+			}
+			return results;
+		},
 	};
 }

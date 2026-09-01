@@ -3,7 +3,6 @@ import { AttemptsExistError, McqForbiddenError, McqNotFoundError } from "@/lib/m
 import type {
 	AttemptRow,
 	ChoiceRow,
-	CreateMcqInput,
 	McqListItem,
 	McqRow,
 	McqWithChoices,
@@ -33,22 +32,23 @@ function toPublicChoice(row: ChoiceRow): PublicChoice {
 	};
 }
 
-async function insertChoices(mcqId: string, input: CreateMcqInput, now: string): Promise<PublicChoice[]> {
-	const db = await getDb();
-	const choices: PublicChoice[] = [];
-	for (const [index, choice] of input.choices.entries()) {
-		const id = crypto.randomUUID();
-		const position = index;
-		await db
+function choiceInsert(
+	db: D1Database,
+	mcqId: string,
+	choice: { body: string; isCorrect: boolean },
+	position: number,
+	now: string,
+): { statement: D1PreparedStatement; publicChoice: PublicChoice } {
+	const id = crypto.randomUUID();
+	return {
+		statement: db
 			.prepare(
 				`INSERT INTO choices (id, mcq_id, body, is_correct, position, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
 			)
-			.bind(id, mcqId, choice.body, choice.isCorrect ? 1 : 0, position, now, now)
-			.run();
-		choices.push({ id, body: choice.body, isCorrect: choice.isCorrect, position });
-	}
-	return choices;
+			.bind(id, mcqId, choice.body, choice.isCorrect ? 1 : 0, position, now, now),
+		publicChoice: { id, body: choice.body, isCorrect: choice.isCorrect, position },
+	};
 }
 
 async function loadChoices(mcqId: string): Promise<ChoiceRow[]> {
@@ -93,15 +93,24 @@ export async function create(ownerId: string, raw: unknown): Promise<McqWithChoi
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
 	const db = await getDb();
-	await db
-		.prepare(
-			`INSERT INTO mcqs (id, created_by, name, question, created_at, updated_at)
+	const choiceRows = input.choices.map((choice, index) => choiceInsert(db, id, choice, index, now));
+	await db.batch([
+		db
+			.prepare(
+				`INSERT INTO mcqs (id, created_by, name, question, created_at, updated_at)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
 			)
-		.bind(id, ownerId, input.name, input.question, now, now)
-		.run();
-	const choices = await insertChoices(id, input, now);
-	return { id, name: input.name, question: input.question, createdAt: now, updatedAt: now, choices };
+			.bind(id, ownerId, input.name, input.question, now, now),
+		...choiceRows.map((row) => row.statement),
+	]);
+	return {
+		id,
+		name: input.name,
+		question: input.question,
+		createdAt: now,
+		updatedAt: now,
+		choices: choiceRows.map((row) => row.publicChoice),
+	};
 }
 
 export async function list(viewerId: string): Promise<McqListItem[]> {
@@ -130,17 +139,21 @@ export async function update(id: string, ownerId: string, raw: unknown): Promise
 	}
 	const now = new Date().toISOString();
 	const db = await getDb();
-	await db
-		.prepare(`UPDATE mcqs SET name = ?1, question = ?2, updated_at = ?3 WHERE id = ?4 AND created_by = ?5`)
-		.bind(input.name, input.question, now, id, ownerId)
-		.run();
+	const statements = [
+		db
+			.prepare(`UPDATE mcqs SET name = ?1, question = ?2, updated_at = ?3 WHERE id = ?4 AND created_by = ?5`)
+			.bind(input.name, input.question, now, id, ownerId),
+	];
 	let choices: PublicChoice[];
 	if (input.choices) {
-		await db.prepare(`DELETE FROM choices WHERE mcq_id = ?1`).bind(id).run();
-		choices = await insertChoices(id, { name: input.name, question: input.question, choices: input.choices }, now);
+		statements.push(db.prepare(`DELETE FROM choices WHERE mcq_id = ?1`).bind(id));
+		const choiceRows = input.choices.map((choice, index) => choiceInsert(db, id, choice, index, now));
+		statements.push(...choiceRows.map((row) => row.statement));
+		choices = choiceRows.map((row) => row.publicChoice);
 	} else {
 		choices = (await loadChoices(id)).map(toPublicChoice);
 	}
+	await db.batch(statements);
 	return {
 		id,
 		name: input.name,
