@@ -52,7 +52,7 @@ describe("Phase 4: MCQ UI", () => {
 	it("shows an empty state when there are no questions", () => {
 		render(<McqList items={[]} />);
 		expect(screen.getByText(/no multiple choice questions yet/i)).toBeTruthy();
-		expect(screen.getAllByRole("link", { name: /create/i }).length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByRole("link", { name: /create/i })).toHaveLength(1);
 	});
 
 	it("hides edit and delete when the viewer is not the owner", async () => {
