@@ -13,8 +13,9 @@ Keep it current. An out-of-date description here misleads every future conversat
 
 This is Quiz Maker: learners register, log in, and will take MCQ quizzes.
 Authentication (D1 users, hashed passwords, cookie sessions) is implemented.
-The technical PRD in `ai-workspace/AUTHENTICATION_TECHNICAL_PRD.md` is the source of truth
-for auth and for the current phase of work.
+The current phase is MCQ create/update/delete. The source of truth for that work is
+`ai-workspace/mcq-crud_prd.md`. Auth remains documented in
+`ai-workspace/AUTHENTICATION_TECHNICAL_PRD.md`.
 
 ## Stack
 

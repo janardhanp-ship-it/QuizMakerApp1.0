@@ -1,10 +1,11 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-	// Pin the workspace root so a stray lockfile elsewhere on the machine cannot
-	// make Turbopack infer the wrong project directory.
+	// Use cwd, not __dirname: Next bundles this file, so __dirname can be a temp
+	// folder with no `src/app`, which makes every route 404 in `next dev`.
 	turbopack: {
-		root: __dirname,
+		root: path.resolve(process.cwd()),
 	},
 };
 
